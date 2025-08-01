@@ -28,6 +28,37 @@ A simple bash script to manage Kubernetes cluster configurations by adding and r
    sudo mv kubeadd.sh /usr/local/bin/kubeadd
    ```
 
+### Adding to bashrc/zshrc
+
+To make the script available from anywhere without moving it to `/usr/local/bin`, you can add it to your shell configuration:
+
+1. **For bash users** - Add to `~/.bashrc`:
+   ```bash
+   echo 'export PATH="$PATH:/path/to/your/kubeadd/directory"' >> ~/.bashrc
+   echo 'alias kubeadd="/path/to/your/kubeadd/directory/kubeadd.sh"' >> ~/.bashrc
+   source ~/.bashrc
+   ```
+
+2. **For zsh users** - Add to `~/.zshrc`:
+   ```bash
+   echo 'export PATH="$PATH:/path/to/your/kubeadd/directory"' >> ~/.zshrc
+   echo 'alias kubeadd="/path/to/your/kubeadd/directory/kubeadd.sh"' >> ~/.zshrc
+   source ~/.zshrc
+   ```
+
+3. **Or create a simple alias** (recommended):
+   ```bash
+   # For bash
+   echo 'alias kubeadd="~/path/to/kubeadd.sh"' >> ~/.bashrc
+   source ~/.bashrc
+   
+   # For zsh
+   echo 'alias kubeadd="~/path/to/kubeadd.sh"' >> ~/.zshrc
+   source ~/.zshrc
+   ```
+
+After adding the alias, you can use `kubeadd` directly instead of `./kubeadd.sh`.
+
 ## Usage
 
 ### Add a New Cluster
