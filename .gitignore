@@ -1,0 +1,40 @@
+# Kubeconfig files
+config
+config.*
+kubeconfig
+kubeconfig.*
+*.kubeconfig
+*.kube
+
+# Backup files
+*.backup.*
+backupconfig
+
+# Temporary files
+*.tmp
+*.temp
+temp_*
+tmp_*
+
+# OS generated files
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# Editor files
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Log files
+*.log
+
+# Personal test configs
+test_*
+yeni_*
