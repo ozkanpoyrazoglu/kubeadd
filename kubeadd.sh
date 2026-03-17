@@ -1,19 +1,19 @@
 #!/bin/bash
 
 KUBECONFIG_FILE="$HOME/.kube/config"
-LOCAL_CONFIG_FILE="~/.kube"
+LOCAL_CONFIG_FILE="/Users/ozkanpoyrazoglu/.kube"
 
 show_help() {
     echo "kubeadd - Kubernetes cluster configuration manager"
     echo ""
     echo "Usage:"
     echo "  kubeadd -f <new_kubeconfig_file>  Add new cluster from kubeconfig file"
-    echo "  kubeadd -d                        Delete existing cluster"
+    echo "  kubeadd -d [context-name]          Delete existing cluster (interactive if no name given)"
     echo "  kubeadd -h                        Show this help"
     echo ""
     echo "Examples:"
     echo "  kubeadd -f ~/Downloads/new-cluster.yaml"
-    echo "  kubeadd -d"
+    echo "  kubeadd -d my-cluster"
 }
 
 validate_server_url() {
@@ -109,11 +109,17 @@ add_cluster() {
         echo ""
         echo "⚠️  Warning: Cluster '$cluster_name' already exists in kubeconfig"
         read -p "Do you want to overwrite it? (y/N): " confirm_overwrite
-        
+
         if [[ ! "$confirm_overwrite" =~ ^[Yy]$ ]]; then
             echo "❌ Operation cancelled"
             exit 1
         fi
+
+        # Remove existing entries before re-adding
+        echo "🗑️  Removing existing '$cluster_name' entries..."
+        kubectl config delete-cluster "$cluster_name" --kubeconfig="$KUBECONFIG_FILE" >/dev/null 2>&1
+        kubectl config delete-context "$cluster_name" --kubeconfig="$KUBECONFIG_FILE" >/dev/null 2>&1
+        kubectl config delete-user "$cluster_name" --kubeconfig="$KUBECONFIG_FILE" >/dev/null 2>&1
     fi
 
     # Create backup
@@ -176,6 +182,8 @@ add_cluster() {
 }
 
 delete_cluster() {
+    local direct_name="$1"
+
     # Check if local config exists, otherwise use global
     if [[ -f "$LOCAL_CONFIG_FILE" ]]; then
         KUBECONFIG_FILE="$LOCAL_CONFIG_FILE"
@@ -189,47 +197,71 @@ delete_cluster() {
         exit 1
     fi
 
-    echo "🗑️  Available clusters for deletion:"
-    echo ""
-    
-    # List all clusters with numbers
-    local clusters=($(kubectl config get-clusters --kubeconfig="$KUBECONFIG_FILE" 2>/dev/null | tail -n +2))
-    
-    if [[ ${#clusters[@]} -eq 0 ]]; then
-        echo "❌ No clusters found in kubeconfig"
-        exit 1
-    fi
-
-    for i in "${!clusters[@]}"; do
-        echo "   $((i+1)). ${clusters[i]}"
-    done
-    
-    echo ""
-    read -p "Enter the number of cluster to delete (or cluster name): " selection
-    
     local cluster_to_delete=""
-    
-    # Check if selection is a number
-    if [[ "$selection" =~ ^[0-9]+$ ]]; then
-        local index=$((selection-1))
-        if [[ $index -ge 0 && $index -lt ${#clusters[@]} ]]; then
-            cluster_to_delete="${clusters[index]}"
-        else
-            echo "❌ Invalid selection number"
-            exit 1
-        fi
-    else
-        # Check if it's a valid cluster name
+
+    if [[ -n "$direct_name" ]]; then
+        # Direct name provided — validate it exists
+        local clusters=($(kubectl config get-clusters --kubeconfig="$KUBECONFIG_FILE" 2>/dev/null | tail -n +2))
+        local found=false
         for cluster in "${clusters[@]}"; do
-            if [[ "$cluster" == "$selection" ]]; then
-                cluster_to_delete="$selection"
+            if [[ "$cluster" == "$direct_name" ]]; then
+                found=true
                 break
             fi
         done
-        
-        if [[ -z "$cluster_to_delete" ]]; then
-            echo "❌ Cluster '$selection' not found"
+
+        if [[ "$found" == false ]]; then
+            echo "❌ Cluster '$direct_name' not found in kubeconfig"
+            echo ""
+            echo "Available clusters:"
+            for c in "${clusters[@]}"; do
+                echo "   - $c"
+            done
             exit 1
+        fi
+
+        cluster_to_delete="$direct_name"
+    else
+        # Interactive selection
+        echo "🗑️  Available clusters for deletion:"
+        echo ""
+
+        local clusters=($(kubectl config get-clusters --kubeconfig="$KUBECONFIG_FILE" 2>/dev/null | tail -n +2))
+
+        if [[ ${#clusters[@]} -eq 0 ]]; then
+            echo "❌ No clusters found in kubeconfig"
+            exit 1
+        fi
+
+        for i in "${!clusters[@]}"; do
+            echo "   $((i+1)). ${clusters[i]}"
+        done
+
+        echo ""
+        read -p "Enter the number of cluster to delete (or cluster name): " selection
+
+        # Check if selection is a number
+        if [[ "$selection" =~ ^[0-9]+$ ]]; then
+            local index=$((selection-1))
+            if [[ $index -ge 0 && $index -lt ${#clusters[@]} ]]; then
+                cluster_to_delete="${clusters[index]}"
+            else
+                echo "❌ Invalid selection number"
+                exit 1
+            fi
+        else
+            # Check if it's a valid cluster name
+            for cluster in "${clusters[@]}"; do
+                if [[ "$cluster" == "$selection" ]]; then
+                    cluster_to_delete="$selection"
+                    break
+                fi
+            done
+
+            if [[ -z "$cluster_to_delete" ]]; then
+                echo "❌ Cluster '$selection' not found"
+                exit 1
+            fi
         fi
     fi
 
@@ -267,30 +299,31 @@ if ! command -v yq >/dev/null 2>&1; then
 fi
 
 # Parse command line arguments
-while getopts "f:dh" opt; do
-    case $opt in
-        f)
-            add_cluster "$OPTARG"
-            exit 0
-            ;;
-        d)
-            delete_cluster
-            exit 0
-            ;;
-        h)
-            show_help
-            exit 0
-            ;;
-        \?)
-            echo "❌ Invalid option: -$OPTARG" >&2
-            show_help
-            exit 1
-            ;;
-    esac
-done
-
-# If no options provided, show help
 if [[ $# -eq 0 ]]; then
     show_help
     exit 1
 fi
+
+case "$1" in
+    -f)
+        if [[ -z "$2" ]]; then
+            echo "❌ Error: -f requires a kubeconfig file path"
+            exit 1
+        fi
+        add_cluster "$2"
+        exit 0
+        ;;
+    -d)
+        delete_cluster "$2"
+        exit 0
+        ;;
+    -h|--help)
+        show_help
+        exit 0
+        ;;
+    *)
+        echo "❌ Invalid option: $1" >&2
+        show_help
+        exit 1
+        ;;
+esac
