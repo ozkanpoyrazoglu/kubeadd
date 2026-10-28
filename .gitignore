@@ -37,4 +37,12 @@ Thumbs.db
 
 # Personal test configs
 test_*
+!tests/test_*.py
 yeni_*
+
+# Python
+__pycache__/
+*.pyc
+*.egg-info/
+build/
+dist/

@@ -1,0 +1,17 @@
+[build-system]
+requires = ["setuptools>=61"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kubeadd"
+version = "2.0.0"
+description = "Import, list and delete kubeconfig contexts on macOS, Linux and Windows"
+readme = "README.md"
+requires-python = ">=3.8"
+license = { text = "MIT" }
+
+[project.scripts]
+kubeadd = "kubeadd:main"
+
+[tool.setuptools]
+py-modules = ["kubeadd"]
