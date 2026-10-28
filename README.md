@@ -24,37 +24,58 @@ own kubeconfig, and lists or deletes them again. Runs on **macOS, Linux and Wind
 
 ## Installation
 
-### With pipx (all platforms)
+### macOS / Linux
+
+```bash
+curl -fsSL https://raw.githubusercontent.com/ozkanpoyrazoglu/kubeadd/main/install.sh | sh
+```
+
+Installs `kubeadd` into `~/.local/bin` (no sudo). The installer checks for Python and kubectl and,
+if `~/.local/bin` is not on your `PATH`, prints the line to add to your shell profile.
+
+- Another location: `curl -fsSL .../install.sh | sudo env PREFIX=/usr/local sh`
+- A specific version: `curl -fsSL .../install.sh | KUBEADD_VERSION=v2.0.0 sh` (any tag, branch or commit)
+- Update: run the same command again
+- Uninstall: `curl -fsSL .../install.sh | sh -s -- --uninstall`
+
+### Windows (PowerShell)
+
+```powershell
+irm https://raw.githubusercontent.com/ozkanpoyrazoglu/kubeadd/main/install.ps1 | iex
+```
+
+Installs into `%LOCALAPPDATA%\Programs\kubeadd` and adds it to your user `PATH` (no administrator
+rights). `kubeadd` then works in cmd.exe and PowerShell; open a new terminal if it is not found.
+
+- A specific version: `$env:KUBEADD_VERSION = "v2.0.0"` before running the command
+- Update: run the same command again
+- Uninstall: `& ([scriptblock]::Create((irm https://raw.githubusercontent.com/ozkanpoyrazoglu/kubeadd/main/install.ps1))) -Uninstall`
+
+### From a clone
+
+```bash
+git clone https://github.com/ozkanpoyrazoglu/kubeadd.git && cd kubeadd
+make install            # macOS / Linux, same as install.sh (PREFIX=... to change the location)
+make uninstall
+```
+
+```powershell
+.\install.ps1            # Windows
+.\install.ps1 -Uninstall
+```
+
+### With pipx
 
 ```bash
 pipx install git+https://github.com/ozkanpoyrazoglu/kubeadd.git
 ```
 
-This puts a `kubeadd` command on your `PATH`.
+> Prefer to read installers before running them? Download `install.sh` / `install.ps1`, look through
+> them (they are short), then run the local file.
 
-### macOS / Linux from a clone
-
-```bash
-git clone https://github.com/ozkanpoyrazoglu/kubeadd.git
-sudo ln -s "$PWD/kubeadd/kubeadd.py" /usr/local/bin/kubeadd
-```
-
-Or add an alias to `~/.zshrc` / `~/.bashrc`:
-
-```bash
-alias kubeadd="/path/to/kubeadd/kubeadd.py"
-```
-
-Existing aliases that point to `kubeadd.sh` keep working: it is now a thin wrapper around `kubeadd.py`.
-
-### Windows from a clone
-
-```powershell
-git clone https://github.com/ozkanpoyrazoglu/kubeadd.git
-```
-
-Add the `kubeadd` folder to your `PATH`; `kubeadd.cmd` then lets you run `kubeadd` from both
-cmd.exe and PowerShell (it uses the `py` launcher when available, otherwise `python`).
+> **Upgrading from the bash version:** if your shell profile has `alias kubeadd=".../kubeadd.sh"`, it still
+> works (`kubeadd.sh` now wraps `kubeadd.py`), but it overrides the installed command - remove the alias
+> after installing. The installer warns you when it finds one.
 
 ## Usage
 
@@ -247,7 +268,7 @@ e.g. `https://k8s.example.com:6443` or `https://127.0.0.1:8443`.
 ## Development
 
 ```bash
-python3 -m unittest discover -s tests -v
+make test        # or: python3 -m unittest discover -s tests -v
 ```
 
 The end-to-end tests run real `kubectl` against temporary files and are skipped when kubectl is missing.
